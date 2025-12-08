@@ -148,14 +148,6 @@ const FIELD_FULLNAME = "field_6393282";
 const FIELD_EMAIL = "field_6393283";
 const FIELD_PASSWORD = "field_6393285";
 
-/* Wallet fields */
-const WALLET_EMAIL = "field_6394418";
-const WALLET_DEPOSIT = "field_6394419";
-const WALLET_RETURNED = "field_6394420";
-const WALLET_COMMISSIONS = "field_6394421";
-const WALLET_EARNINGS = "field_6394422";
-const WALLET_EARNING_BALANCE = "field_6394423";
-
 /* --- HASH PASSWORD (SHA-256) --- */
 async function hashPassword(password) {
     const msgUint8 = new TextEncoder().encode(password);
@@ -214,25 +206,39 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
 
     /* --- AUTO CREATE WALLET ENTRY --- */
     const walletPayload = {
-        [WALLET_EMAIL]: email,
-        [WALLET_DEPOSIT]: "0.00",
-        [WALLET_RETURNED]: "0.00",
-        [WALLET_COMMISSIONS]: "0.00",
-        [WALLET_EARNINGS]: "0.00",
-        [WALLET_EARNING_BALANCE]: "0.00"
+        "name": fullname,
+        "email": email,
+        "Total Wallet Balance": "0.00",
+        "All Earning Wallet": "0.00",
+        "Miner Earning": "0.00",
+        "Total Ref. Commissions": "0.00",
+        "Investment Earning": "0.00"
     };
 
-    await fetch(WALLETS_API, {
-        method: "POST",
-        headers: {
-            "Authorization": "Token " + BASEROW_TOKEN,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(walletPayload)
-    });
+    try {
+        const walletRes = await fetch(WALLETS_API + "?user_field_names=true", {
+            method: "POST",
+            headers: {
+                "Authorization": "Token " + BASEROW_TOKEN,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(walletPayload)
+        });
+
+        if (!walletRes.ok) {
+            const walletError = await walletRes.json();
+            console.error("Wallet creation error:", walletError);
+            showMessage("Account created but wallet setup failed. Please contact support.", true);
+            return;
+        }
+    } catch (error) {
+        console.error("Wallet creation failed:", error);
+        showMessage("Account created but wallet setup failed. Please contact support.", true);
+        return;
+    }
 
     /* --- SUCCESS --- */
-    showMessage("Account created successfully!");
+    showMessage("Account created successfully! Wallet has been initialized with $0.00 balance.");
     setTimeout(() => window.location.href = "dashboard.html", 1200);
 });
 
@@ -240,7 +246,5 @@ function toggleMobileMenu() {
     document.getElementById("mobileMenu").classList.toggle("active");
 }
 </script>
-
-
 </body>
 </html>
