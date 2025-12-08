@@ -140,22 +140,13 @@
 <script>
 /* --- BASEROW CONFIG --- */
 const USERS_API = "https://api.baserow.io/api/database/rows/table/755975/";
-const WALLETS_API = "https://api.baserow.io/api/database/rows/table/756077/";
+const WALLETS_API = "https://api.baserow.io/api/database/rows/table/756077/?user_field_names=true";
 const BASEROW_TOKEN = "LG6hnTBxgBG78FueElsSwpHRd4Wep1oL";
 
 /* User fields */
 const FIELD_FULLNAME = "field_6393282";
 const FIELD_EMAIL = "field_6393283";
 const FIELD_PASSWORD = "field_6393285";
-
-/* Wallet fields - Updated to match new schema */
-const WALLET_NAME = "field_6394417";  // New: name field
-const WALLET_EMAIL = "field_6394418";
-const WALLET_BALANCE = "field_6394419";  // Total Wallet Balance
-const WALLET_EARNINGS = "field_6394420";  // All Earning Wallet
-const WALLET_MINER_EARNINGS = "field_6394421";  // Miner Earning
-const WALLET_REF_COMMISSIONS = "field_6394422";  // Total Ref. Commissions
-const WALLET_INVESTMENT_EARNINGS = "field_6394423";  // Investment Earning
 
 /* --- HASH PASSWORD (SHA-256) --- */
 async function hashPassword(password) {
@@ -190,45 +181,42 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
 
     const hashed = await hashPassword(pass);
 
-    /* --- Create User in USERS Table --- */
-    const userPayload = {
-        [FIELD_FULLNAME]: fullname,
-        [FIELD_EMAIL]: email,
-        [FIELD_PASSWORD]: hashed
-    };
-
-    const res = await fetch(USERS_API, {
-        method: "POST",
-        headers: {
-            "Authorization": "Token " + BASEROW_TOKEN,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(userPayload)
-    });
-
-    const userData = await res.json();
-
-    if (!res.ok) {
-        showMessage(userData.error || "Signup failed", true);
-        return;
-    }
-
-    /* --- AUTO CREATE WALLET ENTRY with new schema --- */
-    const walletPayload = {
-        [WALLET_NAME]: fullname,
-        [WALLET_EMAIL]: email,
-        [WALLET_BALANCE]: 0.00,  // Total Wallet Balance
-        [WALLET_EARNINGS]: 0.00,  // All Earning Wallet
-        [WALLET_MINER_EARNINGS]: 0.00,  // Miner Earning
-        [WALLET_REF_COMMISSIONS]: 0.00,  // Total Ref. Commissions
-        [WALLET_INVESTMENT_EARNINGS]: 0.00  // Investment Earning
-    };
-
-    // Using user_field_names=true as specified in the documentation
-    const walletUrl = WALLETS_API + "?user_field_names=true";
-    
     try {
-        const walletRes = await fetch(walletUrl, {
+        /* --- Create User in USERS Table --- */
+        const userPayload = {
+            [FIELD_FULLNAME]: fullname,
+            [FIELD_EMAIL]: email,
+            [FIELD_PASSWORD]: hashed
+        };
+
+        const res = await fetch(USERS_API, {
+            method: "POST",
+            headers: {
+                "Authorization": "Token " + BASEROW_TOKEN,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(userPayload)
+        });
+
+        const userData = await res.json();
+
+        if (!res.ok) {
+            showMessage(userData.error || "Signup failed", true);
+            return;
+        }
+
+        /* --- AUTO CREATE WALLET ENTRY --- */
+        const walletPayload = {
+            "name": fullname,
+            "email": email,
+            "Total Wallet Balance": 0,
+            "All Earning Wallet": 0,
+            "Miner Earning": 0,
+            "Total Ref. Commissions": 0,
+            "Investment Earning": 0
+        };
+
+        const walletRes = await fetch(WALLETS_API, {
             method: "POST",
             headers: {
                 "Authorization": "Token " + BASEROW_TOKEN,
@@ -238,23 +226,18 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
         });
 
         if (!walletRes.ok) {
-            const errorData = await walletRes.json();
-            console.error("Wallet creation error:", errorData);
-            // User is still created, but wallet might not be
-            showMessage("Account created but wallet setup failed. Please contact support.");
-            setTimeout(() => window.location.href = "dashboard.html", 2000);
-            return;
+            const walletError = await walletRes.json();
+            console.error("Wallet creation error:", walletError);
+            showMessage("Account created but wallet initialization failed. Please contact support.", true);
         }
 
         /* --- SUCCESS --- */
-        showMessage("Account and wallet created successfully!");
+        showMessage("Account created successfully! Redirecting to dashboard...");
         setTimeout(() => window.location.href = "dashboard.html", 1200);
-
-    } catch (walletError) {
-        console.error("Wallet creation failed:", walletError);
-        // User is created, wallet failed
-        showMessage("Account created. Wallet setup encountered an issue.");
-        setTimeout(() => window.location.href = "dashboard.html", 2000);
+        
+    } catch (error) {
+        console.error("Signup error:", error);
+        showMessage("An error occurred during signup. Please try again.", true);
     }
 });
 
