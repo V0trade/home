@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earning Wallet - V0 Trade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <!-- Add currency config script -->
+    <script src="/js/currency-config.js"></script>
+    <style>
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: rgb(203 213 225);
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .sidebar-link:hover {
+            background-color: rgb(168 85 247 / 0.1);
+            color: rgb(168 85 247);
+        }
+        .sidebar-link.active {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.2));
+            color: rgb(168 85 247);
+            font-weight: 600;
+        }
+        
+        /* Updated mobile sidebar behavior */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 40;
+                width: 240px;
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 30;
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+            .sidebar-toggle {
+                display: flex;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+        
+        .mobile-menu { display: none; }
+        .mobile-menu.active { display: block; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; background-color: rgb(15 23 42 / 0.95); min-width: 12rem; border: 1px solid rgb(168 85 247 / 0.2); border-radius: 0.5rem; padding: 0.5rem; z-index: 1000; backdrop-filter: blur(10px); }
+        .dropdown:hover .dropdown-content { display: block; }
+        
+        /* Custom styles for earning wallet */
+        .wallet-card {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .wallet-card:hover {
+            border-color: rgba(168, 85, 247, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.1);
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(236, 72, 153, 0.05));
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(168, 85, 247, 0.4);
+        }
+        
+        .chart-container {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        
+        /* Progress bars */
+        .progress-bar {
+            height: 8px;
+            background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6);
+            border-radius: 4px;
+            animation: progressAnimation 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes progressAnimation {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+        
+        /* Animations */
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .money-animation {
+            animation: moneyFloat 3s ease-in-out infinite;
+        }
+        
+        @keyframes moneyFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(5deg); }
+        }
+        
+        /* Chart animations */
+        @keyframes chartLineDraw {
+            from { stroke-dashoffset: 1000; }
+            to { stroke-dashoffset: 0; }
+        }
+        
+        @keyframes pieSliceGrow {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes candleFlicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+        }
+        
+        .earning-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .badge-mining { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .badge-investment { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
+        .badge-referral { background: linear-gradient(135deg, #10b981, #047857); color: white; }
+        .badge-withdrawal { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        
+        /* Currency switcher styles */
+        .currency-switcher {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .currency-selector {
+            padding: 8px 12px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 6px;
+            background: rgba(30, 41, 59, 0.5);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .currency-selector:hover {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.1);
+        }
+        
+        .currency-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+            margin-top: 5px;
+            padding: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .currency-dropdown.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        .currency-option-dropdown {
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        
+        .currency-option-dropdown:hover {
+            background: rgba(168, 85, 247, 0.1);
+        }
+        
+        .currency-option-dropdown.active {
+            background: rgba(168, 85, 247, 0.15);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .currency-option-dropdown .symbol {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+        
+        .currency-option-dropdown .code {
+            font-weight: 600;
+            min-width: 40px;
+        }
+        
+        .currency-option-dropdown .name {
+            color: #94a3b8;
+            font-size: 12px;
+            flex-grow: 1;
+            text-align: right;
+        }
+        
+        /* Mobile currency selector - always visible */
+        .mobile-currency-toggle {
+            padding: 8px 12px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 6px;
+            background: rgba(30, 41, 59, 0.5);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+            margin-left: auto;
+            margin-right: 12px;
+        }
+        
+        .mobile-currency-dropdown {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 320px;
+            z-index: 1100;
+            display: none;
+            padding: 16px;
+            backdrop-filter: blur(20px);
+        }
+        
+        .mobile-currency-dropdown.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .mobile-currency-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1099;
+            display: none;
+        }
+        
+        .mobile-currency-overlay.show {
+            display: block;
+        }
+        
+        .mobile-currency-option {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .mobile-currency-option:hover {
+            background: rgba(168, 85, 247, 0.1);
+        }
+        
+        .mobile-currency-option.active {
+            background: rgba(168, 85, 247, 0.2);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .mobile-currency-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        
+        .mobile-currency-header h3 {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .close-currency-menu {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 24px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        
+        .close-currency-menu:hover {
+            background: rgba(168, 85, 247, 0.1);
+            color: white;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -48%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950">
+    
+    <!-- Hamburger toggle button for mobile -->
+    <button onclick="toggleSidebar()" class="sidebar-toggle fixed left-4 top-20 z-50 bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-lg shadow-lg transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+    
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    
+    <!-- Updated header with mobile currency toggle -->
+    <header class="sticky top-0 z-50 border-b border-purple-500/20 bg-slate-950/80 backdrop-blur-md">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-4">
+                <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition">
+                    <div class="h-10 w-10">
+                        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+                            <defs>
+                                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color: #a78bfa; stop-opacity: 1" />
+                                    <stop offset="50%" style="stop-color: #ec4899; stop-opacity: 1" />
+                                    <stop offset="100%" style="stop-color: #06b6d4; stop-opacity: 1" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="100" cy="100" r="95" fill="url(#logoGradient)" opacity="0.2" />
+                            <circle cx="100" cy="100" r="90" fill="none" stroke="url(#logoGradient)" stroke-width="2" />
+                            <path d="M 50 60 L 80 140 M 150 60 L 120 140" stroke="url(#logoGradient)" stroke-width="8" stroke-linecap="round" fill="none" />
+                            <circle cx="100" cy="100" r="25" fill="none" stroke="url(#logoGradient)" stroke-width="6" />
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">V0 Trade</span>
+                </a>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden items-center gap-8 md:flex">
+                    <a href="index.html" class="text-sm text-gray-300 hover:text-white transition">Home</a>
+                    <div class="dropdown">
+                        <button class="text-sm text-gray-300 hover:text-white transition flex items-center gap-1">Invest <span>▼</span></button>
+                        <div class="dropdown-content">
+                            <a href="cryptocurrencies.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">Cryptocurrencies</a>
+                            <a href="precious-metals.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">Precious Metals</a>
+                            <a href="stocks.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">Stocks</a>
+                            <a href="etfs.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">ETFs</a>
+                        </div>
+                    </div>
+                    <a href="btc-miner.html" class="text-sm text-gray-300 hover:text-white transition">BTC Miner</a>
+                    <a href="about.html" class="text-sm text-gray-300 hover:text-white transition">About</a>
+                    <a href="security.html" class="text-sm text-gray-300 hover:text-white transition">Security</a>
+                    <div class="dropdown">
+                        <button class="text-sm text-gray-300 hover:text-white transition flex items-center gap-1">Support <span>▼</span></button>
+                        <div class="dropdown-content">
+                            <a href="contact.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">Contact Support</a>
+                            <a href="faq.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">FAQ</a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Right Side - Auth with Currency Switcher -->
+                <div class="hidden items-center gap-4 md:flex">
+                    <!-- Desktop Currency Switcher -->
+                    <div class="currency-switcher">
+                        <div class="currency-selector" onclick="toggleCurrencyDropdown()">
+                            <span class="current-symbol">$</span>
+                            <span class="current-code">USD</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="currency-dropdown"></div>
+                    </div>
+                    
+                    <a href="dashboard.html" class="text-sm text-purple-400 hover:text-purple-300 transition">Dashboard</a>
+                    <span id="userEmailDisplay" class="text-sm text-gray-400">user@email.com</span>
+                    <a href="javascript:void(0)" onclick="logout()" class="text-sm text-gray-300 hover:text-white transition">Logout</a>
+                </div>
+
+                <!-- Mobile header section with currency toggle and menu button -->
+                <div class="flex items-center gap-2 md:hidden">
+                    <!-- Mobile Currency Toggle (always visible) -->
+                    <button class="mobile-currency-toggle" onclick="toggleMobileCurrencyMenu()">
+                        <span class="mobile-currency-symbol">$</span>
+                        <span class="mobile-currency-code">USD</span>
+                        <span>▼</span>
+                    </button>
+
+                    <!-- Mobile Menu Button -->
+                    <button class="md:hidden" onclick="toggleMobileMenu()">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu (without currency selector) -->
+            <div id="mobileMenu" class="mobile-menu border-t border-purple-500/20 py-4 md:hidden">
+                <nav class="flex flex-col gap-3">
+                    <a href="index.html" class="text-sm text-gray-300 hover:text-white">Home</a>
+                    <a href="cryptocurrencies.html" class="text-sm text-gray-300 hover:text-white">Cryptocurrencies</a>
+                    <a href="precious-metals.html" class="text-sm text-gray-300 hover:text-white">Precious Metals</a>
+                    <a href="stocks.html" class="text-sm text-gray-300 hover:text-white">Stocks</a>
+                    <a href="etfs.html" class="text-sm text-gray-300 hover:text-white">ETFs</a>
+                    <a href="btc-miner.html" class="text-sm text-gray-300 hover:text-white">BTC Miner</a>
+                    <a href="about.html" class="text-sm text-gray-300 hover:text-white">About</a>
+                    <a href="security.html" class="text-sm text-gray-300 hover:text-white">Security</a>
+                    <a href="contact.html" class="text-sm text-gray-300 hover:text-white">Contact</a>
+                    <a href="faq.html" class="text-sm text-gray-300 hover:text-white">FAQ</a>
+                    <a href="dashboard.html" class="text-sm text-purple-400 hover:text-purple-300">Dashboard</a>
+                    <a href="javascript:void(0)" onclick="logout()" class="text-sm text-gray-300 hover:text-white">Logout</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Currency Menu Overlay -->
+    <div class="mobile-currency-overlay" id="mobileCurrencyOverlay" onclick="closeMobileCurrencyMenu()"></div>
+    
+    <!-- Mobile Currency Menu -->
+    <div class="mobile-currency-dropdown" id="mobileCurrencyMenu">
+        <div class="mobile-currency-header">
+            <h3>Select Currency</h3>
+            <button class="close-currency-menu" onclick="closeMobileCurrencyMenu()">×</button>
+        </div>
+        <div class="mobile-currency-options">
+            <!-- Options will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="flex min-h-screen">
+        <aside id="sidebar" class="sidebar w-64 bg-slate-900/50 border-r border-purple-500/20 p-4 backdrop-blur-sm">
+            <div class="space-y-1 mb-6">
+                <a href="deposit.html" class="sidebar-link">
+                    <span>💰</span>
+                    <span class="sidebar-text">Deposit</span>
+                </a>
+                <a href="withdraw.html" class="sidebar-link">
+                    <span>💸</span>
+                    <span class="sidebar-text">Withdraw</span>
+                </a>
+            </div>
+            
+            <div class="mb-6">
+                <a href="dashboard.html" class="sidebar-link">
+                    <span>📊</span>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
+                <a href="coin-wallets.html" class="sidebar-link">
+                    <span>🪙</span>
+                    <span class="sidebar-text">Coin Wallets</span>
+                </a>
+                <a href="mining-tracks.html" class="sidebar-link">
+                    <span>⛏️</span>
+                    <span class="sidebar-text">Mining Tracks</span>
+                </a>
+                <a href="investment-tracks.html" class="sidebar-link">
+                    <span>📈</span>
+                    <span class="sidebar-text">Investment Tracks</span>
+                </a>
+                <a href="earning-wallet.html" class="sidebar-link active">
+                    <span>💵</span>
+                    <span class="sidebar-text">Earning Wallet</span>
+                </a>
+            </div>
+
+            <div class="mb-2">
+                <p class="text-xs font-semibold text-gray-500 uppercase px-4 mb-2 sidebar-text">Report</p>
+                <a href="referral-commissions.html" class="sidebar-link">
+                    <span>🎁</span>
+                    <span class="sidebar-text">Ref. Commissions</span>
+                </a>
+                <a href="deposit-history.html" class="sidebar-link">
+                    <span>📥</span>
+                    <span class="sidebar-text">Deposit History</span>
+                </a>
+                <a href="order-history.html" class="sidebar-link">
+                    <span>📋</span>
+                    <span class="sidebar-text">Order History</span>
+                </a>
+                <a href="withdrawals-log.html" class="sidebar-link">
+                    <span>📤</span>
+                    <span class="sidebar-text">Withdrawals Log</span>
+                </a>
+                <a href="transactions.html" class="sidebar-link">
+                    <span>💳</span>
+                    <span class="sidebar-text">Transactions</span>
+                </a>
+            </div>
+
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase px-4 mb-2 sidebar-text">Support</p>
+                <a href="open-ticket.html" class="sidebar-link">
+                    <span>🎫</span>
+                    <span class="sidebar-text">Open New Ticket</span>
+                </a>
+                <a href="support-tickets.html" class="sidebar-link">
+                    <span>📨</span>
+                    <span class="sidebar-text">Support Tickets</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-4 md:p-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+            <div class="max-w-7xl mx-auto">
+                <!-- Page Header -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Earning Wallet</h1>
+                        <p class="text-gray-400">Track your earnings from mining, investments, and referrals</p>
+                    </div>
+                    <button onclick="refreshWalletData()" class="mt-4 md:mt-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh Data
+                    </button>
+                </div>
+
+                <!-- Wallet Balance Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="wallet-card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">Total Earning Balance</p>
+                                <p id="totalEarningBalance" class="text-2xl font-bold text-white" data-amount="0">$0.00</p>
+                            </div>
+                            <div class="text-3xl money-animation">💰</div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">Available</span>
+                                <span class="text-green-400">100%</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div class="progress-bar h-2 rounded-full" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wallet-card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">Mining Earnings</p>
+                                <p id="miningEarnings" class="text-2xl font-bold text-white" data-amount="0">$0.00</p>
+                            </div>
+                            <div class="text-3xl pulse">⛏️</div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">From Mining</span>
+                                <span id="miningPercentage" class="text-amber-400">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wallet-card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">Investment Earnings</p>
+                                <p id="investmentEarnings" class="text-2xl font-bold text-white" data-amount="0">$0.00</p>
+                            </div>
+                            <div class="text-3xl">📈</div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">From Investments</span>
+                                <span id="investmentPercentage" class="text-blue-400">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="wallet-card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">Referral Commissions</p>
+                                <p id="referralEarnings" class="text-2xl font-bold text-white" data-amount="0">$0.00</p>
+                            </div>
+                            <div class="text-3xl">🎁</div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">From Referrals</span>
+                                <span id="referralPercentage" class="text-purple-400">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Earnings Growth Line Chart -->
+                    <div class="chart-container p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Earnings Growth Trend</h3>
+                        <div class="h-64">
+                            <canvas id="earningsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Earnings Distribution Pie Chart -->
+                    <div class="chart-container p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Earnings Distribution</h3>
+                        <div class="h-64">
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Candlestick Chart for Daily Earnings -->
+                <div class="chart-container p-6 mb-8">
+                    <h3 class="text-lg font-semibold text-white mb-4">Daily Earnings Performance</h3>
+                    <div class="h-80">
+                        <canvas id="candlestickChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Earning Statistics -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="stats-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">Daily Average</p>
+                                <p id="dailyAverage" class="text-2xl font-bold text-white" data-amount="0">$0.00</p>
+                            </div>
+                            <div class="text-3xl text-green-400">📅</div>
+                        </div>
+                        <div class="text-sm text-gray-400">
+                            <span class="text-green-400" id="dailyChange">+0%</span> from last week
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">Weekly Growth</p>
+                                <p id="weeklyGrowth" class="text-2xl font-bold text-white">0%</p>
+                            </div>
+                            <div class="text-3xl text-cyan-400">🚀</div>
+                        </div>
+                        <div class="text-sm text-gray-400">
+                            <span class="text-cyan-400" id="weeklyStatus">Steady growth</span> this week
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">Monthly Projection</p>
+                                <p id="monthlyProjection" class="text-2xl font-bold text-white" data-amount="0">$0.00</p>
+                            </div>
+                            <div class="text-3xl text-yellow-400">🎯</div>
+                        </div>
+                        <div class="text-sm text-gray-400">
+                            Based on current earnings rate
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Withdraw Section -->
+                <div class="wallet-card p-6 mb-8">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-2">Ready to Withdraw?</h3>
+                            <p class="text-gray-400">Transfer your earnings to your main wallet or bank account</p>
+                        </div>
+                        <a href="withdraw.html" class="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition inline-flex items-center gap-2">
+                            <span>💸</span> Withdraw Earnings
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Data Status Indicator -->
+                <div class="chart-container p-4 mb-8">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div id="dataStatusIndicator" class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse"></div>
+                            <div>
+                                <p class="text-sm text-white font-medium">Data Status</p>
+                                <p class="text-xs text-gray-400" id="lastUpdateTime">Last updated: Loading...</p>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-400">
+                            <span id="autoUpdateCountdown">Auto-refresh in 24:00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Currency data
+        const CURRENCIES = [
+            { code: 'USD', symbol: '$', name: 'US Dollar', format: (amount) => `$${amount.toFixed(2)}` },
+            { code: 'EUR', symbol: '€', name: 'Euro', format: (amount) => `€${amount.toFixed(2)}` },
+            { code: 'GBP', symbol: '£', name: 'British Pound', format: (amount) => `£${amount.toFixed(2)}` },
+            { code: 'ZAR', symbol: 'R', name: 'South African Rand', format: (amount) => `R${amount.toFixed(2)}` },
+            { code: 'INR', symbol: '₹', name: 'Indian Rupee', format: (amount) => `₹${amount.toFixed(2)}` },
+            { code: 'JPY', symbol: '¥', name: 'Japanese Yen', format: (amount) => `¥${amount.toFixed(2)}` },
+            { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', format: (amount) => `A$${amount.toFixed(2)}` },
+            { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', format: (amount) => `C$${amount.toFixed(2)}` }
+        ];
+        
+        // Constants
+        const API_TOKEN = "LG6hnTBxgBG78FueElsSwpHRd4Wep1oL";
+        const WALLET_TABLE = 756077;
+        const AUTO_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        
+        // Chart instances
+        let earningsChart = null;
+        let distributionChart = null;
+        let candlestickChart = null;
+        
+        // Wallet data storage
+        let walletData = {
+            totalEarningBalance: 0,
+            miningEarnings: 0,
+            investmentEarnings: 0,
+            referralEarnings: 0,
+            lastUpdate: null
+        };
+        
+        // Auto-refresh countdown
+        let autoRefreshTimer = null;
+        let lastRefreshTime = null;
+        
+        // Chart initialization flag
+        let chartsInitialized = false;
+        
+        // Currency functions
+        function getCurrentCurrency() {
+            return localStorage.getItem('v0trade_currency') || 'USD';
+        }
+        
+        function getCurrentCurrencyObject() {
+            const code = getCurrentCurrency();
+            return CURRENCIES.find(c => c.code === code) || CURRENCIES[0];
+        }
+        
+        function updateCurrencySymbols() {
+            const currency = getCurrentCurrencyObject();
+            
+            // Update all currency selector displays
+            document.querySelectorAll('.current-symbol').forEach(el => {
+                el.textContent = currency.symbol;
+            });
+            
+            document.querySelectorAll('.current-code').forEach(el => {
+                el.textContent = currency.code;
+            });
+            
+            document.querySelectorAll('.mobile-currency-symbol').forEach(el => {
+                el.textContent = currency.symbol;
+            });
+            
+            document.querySelectorAll('.mobile-currency-code').forEach(el => {
+                el.textContent = currency.code;
+            });
+            
+            // Update amount displays with current currency formatting
+            updateAmountDisplays();
+            
+            // Update charts with new currency symbol
+            if (chartsInitialized) {
+                updateChartsCurrencySymbol();
+            }
+        }
+        
+        function updateAmountDisplays() {
+            const currency = getCurrentCurrencyObject();
+            
+            // Get and format amounts
+            const totalEarningBalanceEl = document.getElementById('totalEarningBalance');
+            if (totalEarningBalanceEl) {
+                const amount = parseFloat(totalEarningBalanceEl.getAttribute('data-amount') || '0');
+                totalEarningBalanceEl.textContent = currency.format(amount);
+            }
+            
+            const miningEarningsEl = document.getElementById('miningEarnings');
+            if (miningEarningsEl) {
+                const amount = parseFloat(miningEarningsEl.getAttribute('data-amount') || '0');
+                miningEarningsEl.textContent = currency.format(amount);
+            }
+            
+            const investmentEarningsEl = document.getElementById('investmentEarnings');
+            if (investmentEarningsEl) {
+                const amount = parseFloat(investmentEarningsEl.getAttribute('data-amount') || '0');
+                investmentEarningsEl.textContent = currency.format(amount);
+            }
+            
+            const referralEarningsEl = document.getElementById('referralEarnings');
+            if (referralEarningsEl) {
+                const amount = parseFloat(referralEarningsEl.getAttribute('data-amount') || '0');
+                referralEarningsEl.textContent = currency.format(amount);
+            }
+            
+            const dailyAverageEl = document.getElementById('dailyAverage');
+            if (dailyAverageEl) {
+                const amount = parseFloat(dailyAverageEl.getAttribute('data-amount') || '0');
+                dailyAverageEl.textContent = currency.format(amount);
+            }
+            
+            const monthlyProjectionEl = document.getElementById('monthlyProjection');
+            if (monthlyProjectionEl) {
+                const amount = parseFloat(monthlyProjectionEl.getAttribute('data-amount') || '0');
+                monthlyProjectionEl.textContent = currency.format(amount);
+            }
+        }
+        
+        function updateChartsCurrencySymbol() {
+            if (earningsChart) {
+                const currency = getCurrentCurrencyObject();
+                earningsChart.options.scales.y.ticks.callback = function(value) {
+                    return currency.format(value);
+                };
+                earningsChart.update();
+            }
+            
+            if (candlestickChart) {
+                const currency = getCurrentCurrencyObject();
+                if (candlestickChart.options && candlestickChart.options.scales && candlestickChart.options.scales.y) {
+                    candlestickChart.options.scales.y.ticks.callback = function(value) {
+                        return currency.format(value);
+                    };
+                    candlestickChart.update();
+                }
+            }
+            
+            if (distributionChart) {
+                const currency = getCurrentCurrencyObject();
+                distributionChart.options.plugins.tooltip.callbacks.label = function(context) {
+                    const value = context.raw;
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                    return `${context.label}: ${currency.format(value)} (${percentage}%)`;
+                };
+                distributionChart.update();
+            }
+        }
+        
+        // Mobile currency menu functions
+        function toggleMobileCurrencyMenu() {
+            const overlay = document.getElementById('mobileCurrencyOverlay');
+            const menu = document.getElementById('mobileCurrencyMenu');
+            
+            overlay.classList.toggle('show');
+            menu.classList.toggle('show');
+            
+            // Populate currency options if not already done
+            if (menu.querySelector('.mobile-currency-options').children.length === 0) {
+                populateMobileCurrencyOptions();
+            }
+        }
+        
+        function closeMobileCurrencyMenu() {
+            document.getElementById('mobileCurrencyOverlay').classList.remove('show');
+            document.getElementById('mobileCurrencyMenu').classList.remove('show');
+        }
+        
+        function populateMobileCurrencyOptions() {
+            const container = document.querySelector('.mobile-currency-options');
+            const currentCurrency = getCurrentCurrency();
+            
+            container.innerHTML = '';
+            
+            CURRENCIES.forEach(currency => {
+                const option = document.createElement('div');
+                option.className = `mobile-currency-option ${currency.code === currentCurrency ? 'active' : ''}`;
+                option.innerHTML = `
+                    <span class="symbol" style="font-size: 20px; width: 30px;">${currency.symbol}</span>
+                    <span class="code" style="font-weight: 600; min-width: 50px;">${currency.code}</span>
+                    <span class="name" style="color: #94a3b8; font-size: 14px; flex-grow: 1; text-align: right;">${currency.name}</span>
+                `;
+                option.onclick = () => selectMobileCurrency(currency.code);
+                container.appendChild(option);
+            });
+        }
+        
+        function selectMobileCurrency(currencyCode) {
+            // Update localStorage
+            localStorage.setItem('v0trade_currency', currencyCode);
+            
+            // Update currency symbols and displays
+            updateCurrencySymbols();
+            
+            // Close mobile menu
+            closeMobileCurrencyMenu();
+            
+            // Update dropdowns
+            updateCurrencyDropdowns(currencyCode);
+        }
+        
+        function toggleCurrencyDropdown() {
+            const dropdown = document.querySelector('.currency-dropdown');
+            dropdown.classList.toggle('show');
+            
+            // Populate dropdown if empty
+            if (dropdown.children.length === 0) {
+                const currentCurrency = getCurrentCurrency();
+                
+                CURRENCIES.forEach(currency => {
+                    const option = document.createElement('div');
+                    option.className = `currency-option-dropdown ${currency.code === currentCurrency ? 'active' : ''}`;
+                    option.innerHTML = `
+                        <span class="symbol">${currency.symbol}</span>
+                        <span class="code">${currency.code}</span>
+                        <span class="name">${currency.name}</span>
+                    `;
+                    option.onclick = () => {
+                        selectCurrency(currency.code);
+                        dropdown.classList.remove('show');
+                    };
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+        
+        function selectCurrency(currencyCode) {
+            // Update localStorage
+            localStorage.setItem('v0trade_currency', currencyCode);
+            
+            // Update currency symbols and displays
+            updateCurrencySymbols();
+            
+            // Update dropdowns
+            updateCurrencyDropdowns(currencyCode);
+        }
+        
+        function updateCurrencyDropdowns(currencyCode) {
+            // Update desktop dropdown options
+            document.querySelectorAll('.currency-option-dropdown').forEach(option => {
+                const code = option.querySelector('.code').textContent;
+                option.className = `currency-option-dropdown ${code === currencyCode ? 'active' : ''}`;
+            });
+            
+            // Update mobile dropdown options
+            document.querySelectorAll('.mobile-currency-option').forEach(option => {
+                const code = option.querySelector('.code').textContent;
+                option.className = `mobile-currency-option ${code === currencyCode ? 'active' : ''}`;
+            });
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.querySelector('.currency-dropdown');
+            const selector = document.querySelector('.currency-selector');
+            
+            if (dropdown && selector && !dropdown.contains(event.target) && !selector.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', function() {
+            const userEmail = localStorage.getItem("v0trade_user_email");
+            
+            if (!userEmail) {
+                alert("Please login to access this page.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            // Update header with user email
+            const emailDisplay = document.getElementById('userEmailDisplay');
+            if (emailDisplay) {
+                emailDisplay.textContent = userEmail;
+            }
+            
+            // Initialize currency system
+            updateCurrencySymbols();
+            
+            // Load wallet data from Baserow
+            loadWalletData(userEmail);
+            
+            // Setup auto-refresh countdown
+            setupAutoRefreshCountdown();
+            
+            // Close currency dropdowns with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeMobileCurrencyMenu();
+                    const dropdown = document.querySelector('.currency-dropdown');
+                    if (dropdown) dropdown.classList.remove('show');
+                }
+            });
+        });
+
+        async function loadWalletData(email) {
+            try {
+                console.log("Loading wallet data for:", email);
+                
+                // First, find the row ID for this user
+                const searchFilters = encodeURIComponent(JSON.stringify({
+                    filter_type: "AND",
+                    filters: [
+                        {
+                            type: "equal",
+                            field: "email",
+                            value: email
+                        }
+                    ]
+                }));
+
+                const searchUrl = `https://api.baserow.io/api/database/rows/table/${WALLET_TABLE}/?user_field_names=true&filters=${searchFilters}`;
+
+                const searchRes = await fetch(searchUrl, {
+                    headers: { Authorization: `Token ${API_TOKEN}` }
+                });
+
+                const searchData = await searchRes.json();
+                console.log("Search results:", searchData);
+
+                if (!searchData.results || searchData.results.length === 0) {
+                    console.warn("No wallet data found for:", email);
+                    updateUIWithEmptyData();
+                    updateDataStatus('error', 'No wallet data found');
+                    return;
+                }
+
+                const row = searchData.results[0];
+                const rowId = row.id;
+                
+                console.log("Found row ID:", rowId);
+                
+                // Now fetch the specific row using row ID
+                const rowUrl = `https://api.baserow.io/api/database/rows/table/${WALLET_TABLE}/${rowId}/?user_field_names=true`;
+                
+                const rowRes = await fetch(rowUrl, {
+                    headers: { Authorization: `Token ${API_TOKEN}` }
+                });
+
+                if (!rowRes.ok) {
+                    throw new Error(`API Error: ${rowRes.status} ${rowRes.statusText}`);
+                }
+
+                const wallet = await rowRes.json();
+                console.log("Wallet row data:", wallet);
+                
+                // Extract earning data using correct field names
+                walletData.totalEarningBalance = parseFloat(wallet["All Earning Wallet"]) || 0;
+                walletData.miningEarnings = parseFloat(wallet["Miner Earning"]) || 0;
+                walletData.investmentEarnings = parseFloat(wallet["Investment Earning"]) || 0;
+                walletData.referralEarnings = parseFloat(wallet["Total Ref. Commissions"]) || 0;
+                walletData.lastUpdate = new Date().toISOString();
+                
+                console.log("Extracted wallet data:", walletData);
+                
+                // Update UI
+                updateWalletUI();
+                
+                // Initialize charts with wallet data
+                initializeCharts();
+                
+                // Update data status
+                updateDataStatus('success', 'Data loaded successfully');
+                
+                // Reset auto-refresh timer
+                resetAutoRefreshCountdown();
+                
+            } catch (err) {
+                console.error("Error loading wallet data:", err);
+                updateUIWithEmptyData();
+                updateDataStatus('error', 'Failed to load data');
+            }
+        }
+        
+        function updateWalletUI() {
+            try {
+                // Update data attributes with raw amounts (no conversion)
+                document.getElementById('totalEarningBalance').setAttribute('data-amount', walletData.totalEarningBalance);
+                document.getElementById('miningEarnings').setAttribute('data-amount', walletData.miningEarnings);
+                document.getElementById('investmentEarnings').setAttribute('data-amount', walletData.investmentEarnings);
+                document.getElementById('referralEarnings').setAttribute('data-amount', walletData.referralEarnings);
+                
+                // Calculate statistics
+                const dailyAverage = walletData.totalEarningBalance / 30; // Assuming 30 days
+                const weeklyGrowth = calculateWeeklyGrowth();
+                const monthlyProjection = dailyAverage * 30;
+                
+                document.getElementById('dailyAverage').setAttribute('data-amount', dailyAverage);
+                document.getElementById('monthlyProjection').setAttribute('data-amount', monthlyProjection);
+                document.getElementById('weeklyGrowth').textContent = `${weeklyGrowth}%`;
+                
+                // Calculate percentages
+                const total = walletData.totalEarningBalance;
+                if (total > 0) {
+                    const miningPercent = Math.round((walletData.miningEarnings / total) * 100);
+                    const investmentPercent = Math.round((walletData.investmentEarnings / total) * 100);
+                    const referralPercent = Math.round((walletData.referralEarnings / total) * 100);
+                    
+                    document.getElementById('miningPercentage').textContent = `${miningPercent}%`;
+                    document.getElementById('investmentPercentage').textContent = `${investmentPercent}%`;
+                    document.getElementById('referralPercentage').textContent = `${referralPercent}%`;
+                } else {
+                    document.getElementById('miningPercentage').textContent = '0%';
+                    document.getElementById('investmentPercentage').textContent = '0%';
+                    document.getElementById('referralPercentage').textContent = '0%';
+                }
+                
+                // Update trend indicators
+                updateTrendIndicators(weeklyGrowth);
+                
+                // Update currency display with current formatting
+                updateAmountDisplays();
+                
+            } catch (err) {
+                console.error("Error updating wallet UI:", err);
+            }
+        }
+        
+        function calculateWeeklyGrowth() {
+            // Simulate growth based on current earnings
+            const total = walletData.totalEarningBalance;
+            if (total <= 0) return 0;
+            
+            // Higher growth for higher balances (simulated)
+            if (total > 10000) return 5.5 + (Math.random() * 3);
+            if (total > 5000) return 4.0 + (Math.random() * 2);
+            if (total > 1000) return 3.0 + (Math.random() * 1.5);
+            return 2.0 + (Math.random() * 1);
+        }
+        
+        function updateTrendIndicators(weeklyGrowth) {
+            const dailyChangeElement = document.getElementById('dailyChange');
+            const weeklyStatusElement = document.getElementById('weeklyStatus');
+            
+            if (weeklyGrowth > 8) {
+                dailyChangeElement.textContent = `+${(weeklyGrowth / 7).toFixed(1)}%`;
+                dailyChangeElement.className = "text-green-400";
+                weeklyStatusElement.textContent = "Rapid growth";
+                weeklyStatusElement.className = "text-green-400";
+            } else if (weeklyGrowth > 4) {
+                dailyChangeElement.textContent = `+${(weeklyGrowth / 7).toFixed(1)}%`;
+                dailyChangeElement.className = "text-cyan-400";
+                weeklyStatusElement.textContent = "Good growth";
+                weeklyStatusElement.className = "text-cyan-400";
+            } else if (weeklyGrowth > 0) {
+                dailyChangeElement.textContent = `+${(weeklyGrowth / 7).toFixed(1)}%`;
+                dailyChangeElement.className = "text-blue-400";
+                weeklyStatusElement.textContent = "Steady growth";
+                weeklyStatusElement.className = "text-blue-400";
+            } else {
+                dailyChangeElement.textContent = "0%";
+                dailyChangeElement.className = "text-gray-400";
+                weeklyStatusElement.textContent = "No growth";
+                weeklyStatusElement.className = "text-gray-400";
+            }
+        }
+        
+        function updateUIWithEmptyData() {
+            const currency = getCurrentCurrencyObject();
+            
+            document.getElementById('totalEarningBalance').setAttribute('data-amount', '0');
+            document.getElementById('totalEarningBalance').textContent = currency.format(0);
+            
+            document.getElementById('miningEarnings').setAttribute('data-amount', '0');
+            document.getElementById('miningEarnings').textContent = currency.format(0);
+            
+            document.getElementById('investmentEarnings').setAttribute('data-amount', '0');
+            document.getElementById('investmentEarnings').textContent = currency.format(0);
+            
+            document.getElementById('referralEarnings').setAttribute('data-amount', '0');
+            document.getElementById('referralEarnings').textContent = currency.format(0);
+            
+            document.getElementById('miningPercentage').textContent = '0%';
+            document.getElementById('investmentPercentage').textContent = '0%';
+            document.getElementById('referralPercentage').textContent = '0%';
+            
+            document.getElementById('dailyAverage').setAttribute('data-amount', '0');
+            document.getElementById('dailyAverage').textContent = currency.format(0);
+            
+            document.getElementById('weeklyGrowth').textContent = '0%';
+            document.getElementById('monthlyProjection').setAttribute('data-amount', '0');
+            document.getElementById('monthlyProjection').textContent = currency.format(0);
+            
+            document.getElementById('dailyChange').textContent = '+0%';
+            document.getElementById('weeklyStatus').textContent = 'No data';
+        }
+        
+        function initializeCharts() {
+            // Only destroy charts if they exist
+            if (chartsInitialized) {
+                destroyCharts();
+            }
+            
+            try {
+                const currency = getCurrentCurrencyObject();
+                
+                // 1. Earnings Growth Line Chart
+                const earningsCanvas = document.getElementById('earningsChart');
+                if (earningsCanvas) {
+                    // Generate earnings growth data for last 30 days
+                    const dates = [];
+                    const earningsData = [];
+                    let cumulativeEarnings = walletData.totalEarningBalance * 0.3; // Start at 30% of current
+                    
+                    for (let i = 29; i >= 0; i--) {
+                        const date = new Date();
+                        date.setDate(date.getDate() - i);
+                        dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                        
+                        // Simulate daily growth
+                        const dailyGrowth = cumulativeEarnings * 0.03 * (0.8 + Math.random() * 0.4);
+                        cumulativeEarnings += dailyGrowth;
+                        earningsData.push(cumulativeEarnings); // Use raw amounts
+                    }
+                    
+                    earningsChart = new Chart(earningsCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: dates,
+                            datasets: [{
+                                label: 'Total Earnings',
+                                data: earningsData,
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.4,
+                                animation: {
+                                    duration: 2000,
+                                    easing: 'easeInOutQuart'
+                                }
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    labels: { color: '#9ca3af' }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                    ticks: { color: '#9ca3af' }
+                                },
+                                y: {
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                    ticks: { 
+                                        color: '#9ca3af',
+                                        callback: function(value) {
+                                            return currency.format(value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                // 2. Earnings Distribution Pie Chart
+                const distributionCanvas = document.getElementById('distributionChart');
+                if (distributionCanvas) {
+                    const distributionLabels = ['Mining', 'Investments', 'Referrals'];
+                    const distributionData = [
+                        walletData.miningEarnings, // Raw amounts
+                        walletData.investmentEarnings,
+                        walletData.referralEarnings
+                    ];
+                    const distributionColors = ['#f59e0b', '#3b82f6', '#10b981'];
+                    
+                    distributionChart = new Chart(distributionCanvas, {
+                        type: 'doughnut',
+                        data: {
+                            labels: distributionLabels,
+                            datasets: [{
+                                data: distributionData,
+                                backgroundColor: distributionColors,
+                                borderWidth: 0,
+                                hoverOffset: 15
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { color: '#9ca3af', padding: 20 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const total = distributionData.reduce((a, b) => a + b, 0);
+                                            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                            return `${context.label}: ${currency.format(value)} (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            },
+                            animation: {
+                                animateScale: true,
+                                animateRotate: true,
+                                duration: 1500
+                            }
+                        }
+                    });
+                }
+                
+                // 3. Candlestick Chart for Daily Earnings
+                const candlestickCanvas = document.getElementById('candlestickChart');
+                if (candlestickCanvas) {
+                    // Generate candlestick data for last 7 days
+                    const candlestickLabels = [];
+                    const candlestickData = [];
+                    
+                    let baseValue = walletData.totalEarningBalance > 0 ? walletData.totalEarningBalance / 100 : 100; // Scale down for chart
+                    
+                    for (let i = 6; i >= 0; i--) {
+                        const date = new Date();
+                        date.setDate(date.getDate() - i);
+                        candlestickLabels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                        
+                        // Simulate OHLC data for earnings
+                        const volatility = 0.05; // 5% daily volatility
+                        const open = baseValue;
+                        const change = (Math.random() - 0.5) * 2 * volatility * open;
+                        const close = open + change;
+                        const high = Math.max(open, close) * (1 + Math.random() * volatility / 2);
+                        const low = Math.min(open, close) * (1 - Math.random() * volatility / 2);
+                        
+                        candlestickData.push({
+                            x: i,
+                            o: open,
+                            h: high,
+                            l: low,
+                            c: close
+                        });
+                        
+                        baseValue = close;
+                    }
+                    
+                    // Check if Chart.candlestick is available
+                    if (typeof Chart.controllers.candlestick === 'undefined') {
+                        // Fallback to line chart if candlestick is not available
+                        candlestickChart = new Chart(candlestickCanvas, {
+                            type: 'line',
+                            data: {
+                                labels: candlestickLabels,
+                                datasets: [{
+                                    label: 'Daily Earnings',
+                                    data: candlestickData.map(d => d.c),
+                                    borderColor: '#8b5cf6',
+                                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        labels: { color: '#9ca3af' }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                        ticks: { color: '#9ca3af' }
+                                    },
+                                    y: {
+                                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                        ticks: { 
+                                            color: '#9ca3af',
+                                            callback: function(value) {
+                                                return currency.format(value);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        candlestickChart = new Chart(candlestickCanvas, {
+                            type: 'candlestick',
+                            data: {
+                                labels: candlestickLabels,
+                                datasets: [{
+                                    label: 'Daily Earnings Performance',
+                                    data: candlestickData,
+                                    color: {
+                                        up: '#10b981',
+                                        down: '#ef4444',
+                                        unchanged: '#6b7280'
+                                    }
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                animation: {
+                                    duration: 2000,
+                                    easing: 'easeInOutQuart'
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                        ticks: { color: '#9ca3af' }
+                                    },
+                                    y: {
+                                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                        ticks: { 
+                                            color: '#9ca3af',
+                                            callback: function(value) {
+                                                return currency.format(value);
+                                            }
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        labels: { color: '#9ca3af' }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                chartsInitialized = true;
+                
+            } catch (chartErr) {
+                console.error("Error initializing charts:", chartErr);
+                updateDataStatus('error', 'Chart error');
+            }
+        }
+        
+        function destroyCharts() {
+            try {
+                if (earningsChart) {
+                    earningsChart.destroy();
+                    earningsChart = null;
+                }
+                if (distributionChart) {
+                    distributionChart.destroy();
+                    distributionChart = null;
+                }
+                if (candlestickChart) {
+                    candlestickChart.destroy();
+                    candlestickChart = null;
+                }
+                chartsInitialized = false;
+            } catch (err) {
+                console.error("Error destroying charts:", err);
+            }
+        }
+        
+        function refreshWalletData() {
+            const userEmail = localStorage.getItem("v0trade_user_email");
+            if (!userEmail) return;
+            
+            // Show loading state
+            const refreshBtn = document.querySelector('button[onclick="refreshWalletData()"]');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = `
+                <svg class="animate-spin w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refreshing...
+            `;
+            refreshBtn.disabled = true;
+            
+            updateDataStatus('loading', 'Refreshing data...');
+            
+            setTimeout(() => {
+                loadWalletData(userEmail);
+                
+                // Show success indicator
+                refreshBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Refreshed';
+                refreshBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                
+                setTimeout(() => {
+                    refreshBtn.innerHTML = originalText;
+                    refreshBtn.style.background = '';
+                    refreshBtn.disabled = false;
+                }, 2000);
+            }, 1000);
+        }
+        
+        function updateDataStatus(status, message) {
+            const indicator = document.getElementById('dataStatusIndicator');
+            const lastUpdate = document.getElementById('lastUpdateTime');
+            
+            if (status === 'success') {
+                indicator.className = 'w-3 h-3 rounded-full bg-green-500';
+                lastUpdate.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+            } else if (status === 'loading') {
+                indicator.className = 'w-3 h-3 rounded-full bg-yellow-500 animate-pulse';
+                lastUpdate.textContent = message;
+            } else if (status === 'error') {
+                indicator.className = 'w-3 h-3 rounded-full bg-red-500';
+                lastUpdate.textContent = message;
+            }
+        }
+        
+        function setupAutoRefreshCountdown() {
+            // Initial countdown setup
+            updateAutoRefreshCountdown();
+            
+            // Update countdown every second
+            setInterval(updateAutoRefreshCountdown, 1000);
+        }
+        
+        function updateAutoRefreshCountdown() {
+            if (!lastRefreshTime) {
+                lastRefreshTime = Date.now();
+            }
+            
+            const now = Date.now();
+            const timeSinceLastRefresh = now - lastRefreshTime;
+            const timeUntilNextRefresh = AUTO_REFRESH_INTERVAL - timeSinceLastRefresh;
+            
+            if (timeUntilNextRefresh <= 0) {
+                // Auto-refresh time reached
+                const userEmail = localStorage.getItem("v0trade_user_email");
+                if (userEmail) {
+                    console.log("Auto-refreshing wallet data...");
+                    loadWalletData(userEmail);
+                    lastRefreshTime = now;
+                }
+            } else {
+                // Update countdown display
+                const hours = Math.floor(timeUntilNextRefresh / (1000 * 60 * 60));
+                const minutes = Math.floor((timeUntilNextRefresh % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeUntilNextRefresh % (1000 * 60)) / 1000);
+                
+                const countdownElement = document.getElementById('autoUpdateCountdown');
+                if (countdownElement) {
+                    countdownElement.textContent = `Auto-refresh in ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }
+        }
+        
+        function resetAutoRefreshCountdown() {
+            lastRefreshTime = Date.now();
+            updateAutoRefreshCountdown();
+        }
+        
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('active');
+        }
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+        
+        function logout() {
+            if (confirm("Are you sure you want to log out?")) {
+                localStorage.removeItem("v0trade_user_email");
+                window.location.href = "login.html";
+            }
+        }
+        
+        // Auto-refresh when returning to the page
+        window.addEventListener('focus', () => {
+            const userEmail = localStorage.getItem("v0trade_user_email");
+            if (userEmail) {
+                console.log("Page focused, refreshing data...");
+                loadWalletData(userEmail);
+            }
+        });
+        
+        // Clean up charts on page unload
+        window.addEventListener('beforeunload', () => {
+            destroyCharts();
+        });
+        
+        // Global refresh currency function
+        window.refreshCurrency = function() {
+            updateCurrencySymbols();
+        };
+    </script>
+
+</body>
+</html>

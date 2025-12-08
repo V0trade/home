@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ - V0 Trade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .faq-item { cursor: pointer; }
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .faq-item.active .faq-answer { max-height: 500px; }
+        .faq-item .arrow { transition: transform 0.3s ease; }
+        .faq-item.active .arrow { transform: rotate(180deg); }
+        .group > div {
+            transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white">
+    <!-- Header -->
+    <!-- Header (same as index.html) -->
+    <header class="sticky top-0 z-50 border-b border-purple-500/20 bg-slate-950/80 backdrop-blur-md">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-4">
+                <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition">
+                    <div class="h-10 w-10">
+                        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+                            <defs>
+                                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color: #a78bfa; stop-opacity: 1" />
+                                    <stop offset="50%" style="stop-color: #ec4899; stop-opacity: 1" />
+                                    <stop offset="100%" style="stop-color: #06b6d4; stop-opacity: 1" />
+                                </linearGradient>
+                                <filter id="glow">
+                                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                            <circle cx="100" cy="100" r="95" fill="url(#logoGradient)" opacity="0.2" />
+                            <circle cx="100" cy="100" r="90" fill="none" stroke="url(#logoGradient)" stroke-width="2" />
+                            <path d="M 50 60 L 80 140 M 150 60 L 120 140" stroke="url(#logoGradient)" stroke-width="8" stroke-linecap="round" fill="none" filter="url(#glow)" />
+                            <circle cx="100" cy="100" r="25" fill="none" stroke="url(#logoGradient)" stroke-width="6" filter="url(#glow)" />
+                            <line x1="75" y1="100" x2="125" y2="100" stroke="url(#logoGradient)" stroke-width="3" opacity="0.6" />
+                            <circle cx="100" cy="60" r="4" fill="url(#logoGradient)" filter="url(#glow)" />
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">V0 Trade</span>
+                </a>
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="index.html" class="text-sm text-gray-300 hover:text-white transition">Home</a>
+                    <a href="about.html" class="text-sm text-gray-300 hover:text-white transition">About</a>
+                    <a href="faq.html" class="text-sm text-white font-semibold">FAQ</a>
+                </nav>
+                <!-- Updated auth buttons container -->
+                <div class="hidden md:flex items-center gap-4 auth-buttons">
+                    <a href="login.html" class="text-sm text-gray-300 hover:text-white transition">Login</a>
+                    <a href="signup.html" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="px-4 py-24 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-4xl text-center">
+            <h1 class="text-5xl font-bold text-white mb-6">Frequently Asked Questions</h1>
+            <p class="text-xl text-gray-300">Find answers to common questions about V0 Trade</p>
+        </div>
+    </section>
+
+    <!-- FAQ Items -->
+    <section class="px-4 py-16 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-4xl space-y-4">
+            <!-- FAQ 1 -->
+            <div class="faq-item bg-slate-900/50 border border-purple-500/20 rounded-xl p-6" onclick="toggleFAQ(this)">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">How do I create an account?</h3>
+                    <span class="arrow text-purple-400 text-2xl">▼</span>
+                </div>
+                <div class="faq-answer pt-4">
+                    <p class="text-gray-400">Click the "Sign Up" button at the top of the page and fill in your email, password, and other required information. You'll receive a verification email to activate your account.</p>
+                </div>
+            </div>
+
+            <!-- FAQ 2 -->
+            <div class="faq-item bg-slate-900/50 border border-purple-500/20 rounded-xl p-6" onclick="toggleFAQ(this)">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">Is V0 Trade secure?</h3>
+                    <span class="arrow text-purple-400 text-2xl">▼</span>
+                </div>
+                <div class="faq-answer pt-4">
+                    <p class="text-gray-400">Yes! We use bank-level security with 256-bit encryption, cold storage for 95% of funds, and 24/7 monitoring. We also offer $500M insurance coverage.</p>
+                </div>
+            </div>
+
+            <!-- FAQ 3 -->
+            <div class="faq-item bg-slate-900/50 border border-purple-500/20 rounded-xl p-6" onclick="toggleFAQ(this)">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">What are the trading fees?</h3>
+                    <span class="arrow text-purple-400 text-2xl">▼</span>
+                </div>
+                <div class="faq-answer pt-4">
+                    <p class="text-gray-400">Our trading fees start at just 0.1% per trade. Volume traders can qualify for even lower fees through our tier system.</p>
+                </div>
+            </div>
+
+            <!-- FAQ 4 -->
+            <div class="faq-item bg-slate-900/50 border border-purple-500/20 rounded-xl p-6" onclick="toggleFAQ(this)">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">How long do withdrawals take?</h3>
+                    <span class="arrow text-purple-400 text-2xl">▼</span>
+                </div>
+                <div class="faq-answer pt-4">
+                    <p class="text-gray-400">Crypto withdrawals are processed within 30 minutes. Bank transfers typically take 1-3 business days depending on your location and bank.</p>
+                </div>
+            </div>
+
+            <!-- FAQ 5 -->
+            <div class="faq-item bg-slate-900/50 border border-purple-500/20 rounded-xl p-6" onclick="toggleFAQ(this)">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">What is Bitcoin mining?</h3>
+                    <span class="arrow text-purple-400 text-2xl">▼</span>
+                </div>
+                <div class="faq-answer pt-4">
+                    <p class="text-gray-400">Bitcoin mining is the process of validating transactions and adding them to the blockchain. Our cloud mining service allows you to earn Bitcoin without owning expensive hardware.</p>
+                </div>
+            </div>
+
+            <!-- FAQ 6 -->
+            <div class="faq-item bg-slate-900/50 border border-purple-500/20 rounded-xl p-6" onclick="toggleFAQ(this)">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">Can I cancel my mining plan?</h3>
+                    <span class="arrow text-purple-400 text-2xl">▼</span>
+                </div>
+                <div class="faq-answer pt-4">
+                    <p class="text-gray-400">Mining plans are contract-based. You can cancel at any time, but you'll forfeit the remaining contract period. Contact support for more details.</p>
+                </div>
+            </div>
+
+            <!-- FAQ 7 -->
+            <div class="faq-item bg-slate-900/50 border border-purple-500/20 rounded-xl p-6" onclick="toggleFAQ(this)">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">How do I enable 2FA?</h3>
+                    <span class="arrow text-purple-400 text-2xl">▼</span>
+                </div>
+                <div class="faq-answer pt-4">
+                    <p class="text-gray-400">Go to your Account Settings → Security → Enable Two-Factor Authentication. Download an authenticator app like Google Authenticator and scan the QR code.</p>
+                </div>
+            </div>
+
+            <!-- FAQ 8 -->
+            <div class="faq-item bg-slate-900/50 border border-purple-500/20 rounded-xl p-6" onclick="toggleFAQ(this)">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">What cryptocurrencies can I trade?</h3>
+                    <span class="arrow text-purple-400 text-2xl">▼</span>
+                </div>
+                <div class="faq-answer pt-4">
+                    <p class="text-gray-400">We support 150+ cryptocurrencies including Bitcoin, Ethereum, Solana, Cardano, and many more. Check our Cryptocurrencies page for the full list.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact CTA -->
+    <section class="px-4 py-24 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-4xl text-center">
+            <h2 class="text-4xl font-bold text-white mb-6">Still Have Questions?</h2>
+            <p class="text-xl text-gray-300 mb-8">Our support team is here to help 24/7</p>
+            <a href="contact.html" class="inline-flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-bold px-12 py-4 rounded-lg shadow-lg">Contact Support</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-purple-500/20 bg-slate-950 py-16 px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-7xl">
+            <div class="grid md:grid-cols-4 gap-8 mb-12">
+                <div>
+                    <h4 class="font-bold text-white mb-4">V0 Trade</h4>
+                    <ul class="space-y-2">
+                        <li><a href="about.html" class="text-gray-400 hover:text-white transition">About</a></li>
+                        <li><a href="security.html" class="text-gray-400 hover:text-white transition">Security</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">Trading</h4>
+                    <ul class="space-y-2">
+                        <li><a href="cryptocurrencies.html" class="text-gray-400 hover:text-white transition">Cryptocurrencies</a></li>
+                        <li><a href="btc-miner.html" class="text-gray-400 hover:text-white transition">BTC Miner</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">Support</h4>
+                    <ul class="space-y-2">
+                        <li><a href="faq.html" class="text-gray-400 hover:text-white transition">FAQ</a></li>
+                        <li><a href="contact.html" class="text-gray-400 hover:text-white transition">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">Account</h4>
+                    <ul class="space-y-2">
+                        <li><a href="signup.html" class="text-gray-400 hover:text-white transition">Sign Up</a></li>
+                        <li><a href="login.html" class="text-gray-400 hover:text-white transition">Login</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-purple-500/20 pt-8">
+                <p class="text-xs text-gray-500 text-center">© 2025 V0 Trade. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // FAQ toggle function
+        function toggleFAQ(element) {
+            element.classList.toggle('active');
+        }
+
+        // Login state detection and UI update
+        function updateAuthUI() {
+            const userEmail = localStorage.getItem("v0trade_user_email");
+            const authContainer = document.querySelector('.auth-buttons');
+            
+            if (authContainer) {
+                if (userEmail) {
+                    // User is logged in - show "My Account"
+                    authContainer.innerHTML = `
+                        <div class="relative group">
+                            <button class="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition">
+                                <span class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                                    ${userEmail.charAt(0).toUpperCase()}
+                                </span>
+                                My Account
+                            </button>
+                            <div class="absolute right-0 mt-2 w-48 bg-slate-900 border border-purple-500/20 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <div class="p-4 border-b border-purple-500/20">
+                                    <p class="text-xs text-gray-400">Signed in as</p>
+                                    <p class="text-sm font-medium truncate">${userEmail}</p>
+                                </div>
+                                <div class="p-2">
+                                    <a href="dashboard.html" class="block px-3 py-2 text-sm text-gray-300 hover:bg-slate-800 hover:text-white rounded transition">Dashboard</a>
+                                    <a href="profile.html" class="block px-3 py-2 text-sm text-gray-300 hover:bg-slate-800 hover:text-white rounded transition">Profile Settings</a>
+                                    <button onclick="logout()" class="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-slate-800 hover:text-red-300 rounded transition mt-2 border-t border-purple-500/20 pt-2">
+                                        Logout
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // User is not logged in - show Login/Sign Up
+                    authContainer.innerHTML = `
+                        <a href="login.html" class="text-sm text-gray-300 hover:text-white transition">Login</a>
+                        <a href="signup.html" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2">Sign Up</a>
+                    `;
+                }
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem("v0trade_user_email");
+            // Also remove any other user data if stored
+            localStorage.removeItem("v0trade_user_name");
+            localStorage.removeItem("v0trade_user_balance");
+            
+            // Redirect to home page after logout
+            window.location.href = "index.html";
+        }
+
+        // Update UI when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateAuthUI();
+            
+            // Optional: Check login state periodically (every 5 seconds)
+            setInterval(updateAuthUI, 5000);
+            
+            // Add click outside to close dropdown
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.group')) {
+                    const dropdowns = document.querySelectorAll('.group > div');
+                    dropdowns.forEach(dropdown => {
+                        dropdown.classList.remove('opacity-100', 'visible');
+                        dropdown.classList.add('opacity-0', 'invisible');
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
