@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Pending - V0 Trade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add currency config script -->
+    <script src="/js/currency-config.js"></script>
+    <style>
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: rgb(203 213 225);
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .sidebar-link:hover {
+            background-color: rgb(168 85 247 / 0.1);
+            color: rgb(168 85 247);
+        }
+        .sidebar-link.active {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.2));
+            color: rgb(168 85 247);
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 40;
+                width: 240px;
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 30;
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+            .sidebar-toggle {
+                display: flex;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+        
+        .mobile-menu { display: none; }
+        .mobile-menu.active { display: block; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; background-color: rgb(15 23 42 / 0.95); min-width: 12rem; border: 1px solid rgb(168 85 247 / 0.2); border-radius: 0.5rem; padding: 0.5rem; z-index: 1000; backdrop-filter: blur(10px); }
+        .dropdown:hover .dropdown-content { display: block; }
+        
+        /* Currency switcher styles */
+        .currency-switcher {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .currency-selector {
+            padding: 8px 12px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 6px;
+            background: rgba(30, 41, 59, 0.5);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .currency-selector:hover {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.1);
+        }
+        
+        .currency-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+            margin-top: 5px;
+            padding: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .currency-dropdown.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        .currency-option-dropdown {
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        
+        .currency-option-dropdown:hover {
+            background: rgba(168, 85, 247, 0.1);
+        }
+        
+        .currency-option-dropdown.active {
+            background: rgba(168, 85, 247, 0.15);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .currency-option-dropdown .symbol {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+        
+        .currency-option-dropdown .code {
+            font-weight: 600;
+            min-width: 40px;
+        }
+        
+        .currency-option-dropdown .name {
+            color: #94a3b8;
+            font-size: 12px;
+            flex-grow: 1;
+            text-align: right;
+        }
+        
+        /* Mobile currency selector - always visible */
+        .mobile-currency-toggle {
+            padding: 8px 12px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 6px;
+            background: rgba(30, 41, 59, 0.5);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+            margin-left: auto;
+            margin-right: 12px;
+        }
+        
+        .mobile-currency-dropdown {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 320px;
+            z-index: 1100;
+            display: none;
+            padding: 16px;
+            backdrop-filter: blur(20px);
+        }
+        
+        .mobile-currency-dropdown.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .mobile-currency-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1099;
+            display: none;
+        }
+        
+        .mobile-currency-overlay.show {
+            display: block;
+        }
+        
+        .mobile-currency-option {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .mobile-currency-option:hover {
+            background: rgba(168, 85, 247, 0.1);
+        }
+        
+        .mobile-currency-option.active {
+            background: rgba(168, 85, 247, 0.2);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .mobile-currency-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        
+        .mobile-currency-header h3 {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .close-currency-menu {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 24px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        
+        .close-currency-menu:hover {
+            background: rgba(168, 85, 247, 0.1);
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -48%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950">
+    
+    <button onclick="toggleSidebar()" class="sidebar-toggle fixed left-4 top-20 z-50 bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-lg shadow-lg transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+    
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    
+    <!-- Updated header with mobile currency toggle -->
+    <header class="sticky top-0 z-50 border-b border-purple-500/20 bg-slate-950/80 backdrop-blur-md">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-4">
+                <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition">
+                    <div class="h-10 w-10">
+                        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+                            <defs>
+                                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color: #a78bfa; stop-opacity: 1" />
+                                    <stop offset="50%" style="stop-color: #ec4899; stop-opacity: 1" />
+                                    <stop offset="100%" style="stop-color: #06b6d4; stop-opacity: 1" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="100" cy="100" r="95" fill="url(#logoGradient)" opacity="0.2" />
+                            <circle cx="100" cy="100" r="90" fill="none" stroke="url(#logoGradient)" stroke-width="2" />
+                            <path d="M 50 60 L 80 140 M 150 60 L 120 140" stroke="url(#logoGradient)" stroke-width="8" stroke-linecap="round" fill="none" />
+                            <circle cx="100" cy="100" r="25" fill="none" stroke="url(#logoGradient)" stroke-width="6" />
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">V0 Trade</span>
+                </a>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden items-center gap-8 md:flex">
+                    <a href="index.html" class="text-sm text-gray-300 hover:text-white transition">Home</a>
+                    <div class="dropdown">
+                        <button class="text-sm text-gray-300 hover:text-white transition flex items-center gap-1">Invest <span>▼</span></button>
+                        <div class="dropdown-content">
+                            <a href="cryptocurrencies.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">Cryptocurrencies</a>
+                            <a href="precious-metals.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">Precious Metals</a>
+                            <a href="stocks.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">Stocks</a>
+                            <a href="etfs.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">ETFs</a>
+                        </div>
+                    </div>
+                    <a href="btc-miner.html" class="text-sm text-gray-300 hover:text-white transition">BTC Miner</a>
+                    <a href="about.html" class="text-sm text-gray-300 hover:text-white transition">About</a>
+                    <a href="security.html" class="text-sm text-gray-300 hover:text-white transition">Security</a>
+                    <div class="dropdown">
+                        <button class="text-sm text-gray-300 hover:text-white transition flex items-center gap-1">Support <span>▼</span></button>
+                        <div class="dropdown-content">
+                            <a href="contact.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">Contact Support</a>
+                            <a href="faq.html" class="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-purple-500/10 rounded">FAQ</a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Right Side - Auth with Currency Switcher -->
+                <div class="hidden items-center gap-4 md:flex">
+                    <!-- Desktop Currency Switcher -->
+                    <div class="currency-switcher">
+                        <div class="currency-selector">
+                            <span class="current-symbol">$</span>
+                            <span class="current-code">USD</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="currency-dropdown"></div>
+                    </div>
+                    
+                    <a href="dashboard.html" class="text-sm text-purple-400 hover:text-purple-300 transition user-email-display"></a>
+                    <span id="headerEmailDisplay" class="text-sm text-gray-400"></span>
+                    <a href="javascript:void(0)" onclick="logout()" class="text-sm text-gray-300 hover:text-white transition">Logout</a>
+                </div>
+
+                <!-- Mobile header section with currency toggle and menu button -->
+                <div class="flex items-center gap-2 md:hidden">
+                    <!-- Mobile Currency Toggle (always visible) -->
+                    <button class="mobile-currency-toggle" onclick="toggleMobileCurrencyMenu()">
+                        <span class="mobile-currency-symbol">$</span>
+                        <span class="mobile-currency-code">USD</span>
+                        <span>▼</span>
+                    </button>
+
+                    <!-- Mobile Menu Button -->
+                    <button class="md:hidden" onclick="toggleMobileMenu()">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu (without currency selector) -->
+            <div id="mobileMenu" class="mobile-menu border-t border-purple-500/20 py-4 md:hidden">
+                <nav class="flex flex-col gap-3">
+                    <a href="index.html" class="text-sm text-gray-300 hover:text-white">Home</a>
+                    <a href="cryptocurrencies.html" class="text-sm text-gray-300 hover:text-white">Cryptocurrencies</a>
+                    <a href="precious-metals.html" class="text-sm text-gray-300 hover:text-white">Precious Metals</a>
+                    <a href="stocks.html" class="text-sm text-gray-300 hover:text-white">Stocks</a>
+                    <a href="etfs.html" class="text-sm text-gray-300 hover:text-white">ETFs</a>
+                    <a href="btc-miner.html" class="text-sm text-gray-300 hover:text-white">BTC Miner</a>
+                    <a href="about.html" class="text-sm text-gray-300 hover:text-white">About</a>
+                    <a href="security.html" class="text-sm text-gray-300 hover:text-white">Security</a>
+                    <a href="contact.html" class="text-sm text-gray-300 hover:text-white">Contact</a>
+                    <a href="faq.html" class="text-sm text-gray-300 hover:text-white">FAQ</a>
+                    <a href="dashboard.html" class="text-sm text-purple-400 hover:text-purple-300">Dashboard</a>
+                    <a href="javascript:void(0)" onclick="logout()" class="text-sm text-gray-300 hover:text-white">Logout</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Currency Menu Overlay -->
+    <div class="mobile-currency-overlay" id="mobileCurrencyOverlay" onclick="closeMobileCurrencyMenu()"></div>
+    
+    <!-- Mobile Currency Menu -->
+    <div class="mobile-currency-dropdown" id="mobileCurrencyMenu">
+        <div class="mobile-currency-header">
+            <h3>Select Currency</h3>
+            <button class="close-currency-menu" onclick="closeMobileCurrencyMenu()">×</button>
+        </div>
+        <div class="mobile-currency-options">
+            <!-- Options will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="flex min-h-screen">
+        <aside id="sidebar" class="sidebar w-64 bg-slate-900/50 border-r border-purple-500/20 p-4 backdrop-blur-sm">
+            <div class="space-y-1 mb-6">
+                <a href="deposit.html" class="sidebar-link">
+                    <span>💰</span>
+                    <span class="sidebar-text">Deposit</span>
+                </a>
+                <a href="withdraw.html" class="sidebar-link">
+                    <span>💸</span>
+                    <span class="sidebar-text">Withdraw</span>
+                </a>
+            </div>
+            
+            <div class="mb-6">
+                <a href="dashboard.html" class="sidebar-link">
+                    <span>📊</span>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
+                <a href="coin-wallets.html" class="sidebar-link">
+                    <span>🪙</span>
+                    <span class="sidebar-text">Coin Wallets</span>
+                </a>
+                <a href="mining-tracks.html" class="sidebar-link">
+                    <span>⛏️</span>
+                    <span class="sidebar-text">Mining Tracks</span>
+                </a>
+                <a href="investment-tracks.html" class="sidebar-link">
+                    <span>📈</span>
+                    <span class="sidebar-text">Investment Tracks</span>
+                </a>
+            </div>
+
+            <div class="mb-2">
+                <p class="text-xs font-semibold text-gray-500 uppercase px-4 mb-2 sidebar-text">Report</p>
+                <a href="referral-commissions.html" class="sidebar-link">
+                    <span>🎁</span>
+                    <span class="sidebar-text">Ref. Commissions</span>
+                </a>
+                <a href="deposit-history.html" class="sidebar-link">
+                    <span>📥</span>
+                    <span class="sidebar-text">Deposit History</span>
+                </a>
+                <a href="order-history.html" class="sidebar-link">
+                    <span>📋</span>
+                    <span class="sidebar-text">Order History</span>
+                </a>
+                <a href="withdrawals-log.html" class="sidebar-link">
+                    <span>📤</span>
+                    <span class="sidebar-text">Withdrawals Log</span>
+                </a>
+                <a href="transactions.html" class="sidebar-link">
+                    <span>💳</span>
+                    <span class="sidebar-text">Transactions</span>
+                </a>
+            </div>
+
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase px-4 mb-2 sidebar-text">Support</p>
+                <a href="open-ticket.html" class="sidebar-link">
+                    <span>🎫</span>
+                    <span class="sidebar-text">Open New Ticket</span>
+                </a>
+                <a href="support-tickets.html" class="sidebar-link">
+                    <span>📨</span>
+                    <span class="sidebar-text">Support Tickets</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-4 md:p-8 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-950">
+            <div class="max-w-2xl mx-auto">
+                <div class="text-center py-12">
+                    <div class="mb-8">
+                        <div class="inline-flex items-center justify-center w-24 h-24 bg-yellow-500/20 rounded-full mb-6 animate-pulse">
+                            <span class="text-5xl">⏳</span>
+                        </div>
+                        <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">Payment Pending</h1>
+                        <p class="text-gray-400 text-lg mb-8">Your payment is being processed</p>
+                    </div>
+
+                    <div class="bg-slate-900/80 backdrop-blur-sm rounded-xl border border-purple-500/20 p-6 md:p-8 mb-6 text-left">
+                        <h2 class="text-xl font-semibold text-white mb-4">Payment Details</h2>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between py-2 border-b border-slate-700">
+                                <span class="text-gray-400">Payment Method:</span>
+                                <span class="text-white font-semibold" id="paymentMethod">-</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-slate-700">
+                                <span class="text-gray-400">Amount:</span>
+                                <span class="text-white font-semibold" id="paymentAmount">$0.00</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-slate-700">
+                                <span class="text-gray-400">Email:</span>
+                                <span class="text-white font-semibold" id="paymentEmail">-</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-slate-700" id="walletAddressContainer">
+                                <span class="text-gray-400">Wallet Address:</span>
+                                <span class="text-white font-semibold font-mono text-sm" id="paymentWallet">-</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-slate-700" id="voucherPinContainer" style="display: none;">
+                                <span class="text-gray-400">Voucher PIN:</span>
+                                <span class="text-white font-semibold font-mono" id="paymentPin">-</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-slate-700">
+                                <span class="text-gray-400">Transaction ID:</span>
+                                <span class="text-white font-semibold font-mono text-sm" id="transactionId">-</span>
+                            </div>
+                            <div class="flex justify-between py-2">
+                                <span class="text-gray-400">Status:</span>
+                                <span class="text-yellow-400 font-semibold" id="paymentStatus">Pending Confirmation</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6 mb-6">
+                        <div class="flex gap-3">
+                            <span class="text-2xl">ℹ️</span>
+                            <div class="text-left">
+                                <p class="text-blue-400 font-semibold mb-2">What happens next?</p>
+                                <ul class="text-gray-300 text-sm space-y-2">
+                                    <li>• Your payment will be verified by our team</li>
+                                    <li>• This usually takes 5-30 minutes</li>
+                                    <li>• You will receive an email confirmation once approved</li>
+                                    <li>• Funds will be credited to your deposit wallet</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="dashboard.html" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 px-6 rounded-lg transition">
+                            Go to Dashboard
+                        </a>
+                        <a href="deposit-history.html" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 px-6 rounded-lg transition">
+                            View Deposit History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Currency data
+        const CURRENCIES = [
+            { code: 'USD', symbol: '$', name: 'US Dollar' },
+            { code: 'EUR', symbol: '€', name: 'Euro' },
+            { code: 'GBP', symbol: '£', name: 'British Pound' },
+            { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
+            { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+            { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+            { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+            { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' }
+        ];
+        
+        let currentUserEmail = '';
+
+        // Mobile menu functions
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            if (menu) {
+                menu.classList.toggle('active');
+            }
+        }
+        
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('active');
+        }
+        
+        // Mobile currency menu functions
+        function toggleMobileCurrencyMenu() {
+            const overlay = document.getElementById('mobileCurrencyOverlay');
+            const menu = document.getElementById('mobileCurrencyMenu');
+            
+            overlay.classList.toggle('show');
+            menu.classList.toggle('show');
+            
+            // Populate currency options if not already done
+            if (menu.querySelector('.mobile-currency-options').children.length === 0) {
+                populateMobileCurrencyOptions();
+            }
+        }
+        
+        function closeMobileCurrencyMenu() {
+            document.getElementById('mobileCurrencyOverlay').classList.remove('show');
+            document.getElementById('mobileCurrencyMenu').classList.remove('show');
+        }
+        
+        function populateMobileCurrencyOptions() {
+            const container = document.querySelector('.mobile-currency-options');
+            const currentCurrency = getCurrentCurrency();
+            
+            container.innerHTML = '';
+            
+            CURRENCIES.forEach(currency => {
+                const option = document.createElement('div');
+                option.className = `mobile-currency-option ${currency.code === currentCurrency ? 'active' : ''}`;
+                option.innerHTML = `
+                    <span class="symbol" style="font-size: 20px; width: 30px;">${currency.symbol}</span>
+                    <span class="code" style="font-weight: 600; min-width: 50px;">${currency.code}</span>
+                    <span class="name" style="color: #94a3b8; font-size: 14px; flex-grow: 1; text-align: right;">${currency.name}</span>
+                `;
+                option.onclick = () => selectMobileCurrency(currency.code);
+                container.appendChild(option);
+            });
+        }
+        
+        function selectMobileCurrency(currencyCode) {
+            // Update mobile toggle display
+            const currency = CURRENCIES.find(c => c.code === currencyCode);
+            if (currency) {
+                document.querySelector('.mobile-currency-symbol').textContent = currency.symbol;
+                document.querySelector('.mobile-currency-code').textContent = currency.code;
+            }
+            
+            // Update desktop switcher if visible
+            const desktopSelector = document.querySelector('.currency-selector');
+            if (desktopSelector) {
+                desktopSelector.querySelector('.current-symbol').textContent = currency.symbol;
+                desktopSelector.querySelector('.current-code').textContent = currency.code;
+            }
+            
+            // Update all currency symbols on page
+            updateCurrencySymbols(currencyCode);
+            
+            // Save to localStorage
+            localStorage.setItem('v0trade_currency', currencyCode);
+            
+            // Close mobile menu
+            closeMobileCurrencyMenu();
+            
+            // Dispatch currency change event
+            document.dispatchEvent(new CustomEvent('currencyChanged', { detail: { code: currencyCode, symbol: currency.symbol } }));
+            
+            // Refresh payment amount display with new currency
+            loadDepositInfo();
+        }
+        
+        function getCurrentCurrency() {
+            return localStorage.getItem('v0trade_currency') || 'USD';
+        }
+        
+        function updateCurrencySymbols(currencyCode) {
+            const currency = CURRENCIES.find(c => c.code === currencyCode);
+            if (!currency) return;
+            
+            // Update all elements with data-currency-symbol attribute
+            document.querySelectorAll('[data-currency-symbol]').forEach(el => {
+                el.textContent = currency.symbol;
+            });
+        }
+
+        // Check if user is logged in
+        function checkAuth() {
+            const userEmail = localStorage.getItem("v0trade_user_email");
+            console.log('[Payment Pending] Checking auth - user email:', userEmail);
+            
+            if (!userEmail) {
+                console.log('[Payment Pending] No user logged in - redirecting to login');
+                window.location.href = 'login.html';
+                return null;
+            }
+            
+            return userEmail;
+        }
+
+        // Update header email display
+        function updateHeaderEmail(email) {
+            const headerEmailElements = document.querySelectorAll('#headerEmailDisplay, .user-email-display');
+            headerEmailElements.forEach(element => {
+                if (element) {
+                    element.textContent = email;
+                }
+            });
+        }
+
+        // Load deposit information from localStorage
+        function loadDepositInfo() {
+            try {
+                // Get current currency
+                const currentCurrency = getCurrentCurrency();
+                const currencySymbol = CURRENCIES.find(c => c.code === currentCurrency)?.symbol || '$';
+                
+                // Get deposit information from localStorage
+                const depositMethod = localStorage.getItem('deposit_method');
+                const depositAmount = localStorage.getItem('deposit_amount');
+                const depositEmail = localStorage.getItem('deposit_email');
+                const transactionId = localStorage.getItem('transaction_id');
+                const depositTimestamp = localStorage.getItem('deposit_timestamp');
+                const depositWallet = localStorage.getItem('deposit_wallet_address');
+                const voucherPin = localStorage.getItem('voucher_pin');
+                const depositStatus = localStorage.getItem('deposit_status') || 'pending';
+                
+                console.log('[Payment Pending] Loading deposit info:', {
+                    method: depositMethod,
+                    amount: depositAmount,
+                    email: depositEmail,
+                    transactionId: transactionId,
+                    wallet: depositWallet,
+                    pin: voucherPin,
+                    status: depositStatus,
+                    currency: currentCurrency
+                });
+
+                // Update UI with deposit information
+                if (depositMethod) {
+                    document.getElementById('paymentMethod').textContent = depositMethod;
+                    
+                    // Show/hide fields based on method
+                    if (depositWallet && depositWallet !== "N/A") {
+                        document.getElementById('walletAddressContainer').style.display = 'flex';
+                        document.getElementById('paymentWallet').textContent = depositWallet;
+                    } else {
+                        document.getElementById('walletAddressContainer').style.display = 'none';
+                    }
+                    
+                    if (voucherPin) {
+                        document.getElementById('voucherPinContainer').style.display = 'flex';
+                        // Mask the PIN for security (show first 4 and last 4 characters)
+                        const maskedPin = voucherPin.length > 8 
+                            ? `${voucherPin.substring(0, 4)}****${voucherPin.substring(voucherPin.length - 4)}`
+                            : '****';
+                        document.getElementById('paymentPin').textContent = maskedPin;
+                    } else {
+                        document.getElementById('voucherPinContainer').style.display = 'none';
+                    }
+                }
+                
+                if (depositAmount) {
+                    // Use currency symbol from currency system
+                    document.getElementById('paymentAmount').textContent = `${currencySymbol}${depositAmount} USD`;
+                }
+                
+                if (depositEmail) {
+                    document.getElementById('paymentEmail').textContent = depositEmail;
+                }
+                
+                if (transactionId) {
+                    document.getElementById('transactionId').textContent = transactionId;
+                }
+                
+                if (depositStatus) {
+                    const statusElement = document.getElementById('paymentStatus');
+                    statusElement.textContent = depositStatus.charAt(0).toUpperCase() + depositStatus.slice(1);
+                    
+                    // Set color based on status
+                    if (depositStatus === 'completed' || depositStatus === 'success') {
+                        statusElement.className = 'text-green-400 font-semibold';
+                    } else if (depositStatus === 'failed' || depositStatus === 'rejected') {
+                        statusElement.className = 'text-red-400 font-semibold';
+                    } else if (depositStatus === 'pending') {
+                        statusElement.className = 'text-yellow-400 font-semibold';
+                    } else {
+                        statusElement.className = 'text-yellow-400 font-semibold';
+                    }
+                }
+                
+                // Check if we have enough info to display
+                if (!depositMethod || !depositAmount || !depositEmail) {
+                    console.log('[Payment Pending] Missing deposit information');
+                    
+                    // Check if we have a recent transaction in latest_transactions
+                    const latestTransactions = JSON.parse(localStorage.getItem('latest_transactions') || '[]');
+                    if (latestTransactions.length > 0) {
+                        const latestTransaction = latestTransactions[0];
+                        console.log('[Payment Pending] Using latest transaction:', latestTransaction);
+                        
+                        document.getElementById('paymentMethod').textContent = latestTransaction.method || 'Unknown';
+                        document.getElementById('paymentAmount').textContent = `${currencySymbol}${latestTransaction.amount || '0.00'} USD`;
+                        document.getElementById('paymentEmail').textContent = latestTransaction.email || 'Unknown';
+                        document.getElementById('transactionId').textContent = latestTransaction.id || 'Unknown';
+                        
+                        if (latestTransaction.wallet && latestTransaction.wallet !== "N/A") {
+                            document.getElementById('walletAddressContainer').style.display = 'flex';
+                            document.getElementById('paymentWallet').textContent = latestTransaction.wallet;
+                        }
+                        
+                        if (latestTransaction.pin) {
+                            document.getElementById('voucherPinContainer').style.display = 'flex';
+                            const maskedPin = latestTransaction.pin.length > 8 
+                                ? `${latestTransaction.pin.substring(0, 4)}****${latestTransaction.pin.substring(latestTransaction.pin.length - 4)}`
+                                : '****';
+                            document.getElementById('paymentPin').textContent = maskedPin;
+                        }
+                        
+                        const status = latestTransaction.status || 'pending';
+                        const statusElement = document.getElementById('paymentStatus');
+                        statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                        
+                        if (status === 'completed' || status === 'success') {
+                            statusElement.className = 'text-green-400 font-semibold';
+                        } else if (status === 'failed' || status === 'rejected') {
+                            statusElement.className = 'text-red-400 font-semibold';
+                        } else {
+                            statusElement.className = 'text-yellow-400 font-semibold';
+                        }
+                    } else {
+                        // No transaction found, redirect to deposit page
+                        setTimeout(() => {
+                            alert('No deposit information found. Please make a deposit first.');
+                            window.location.href = 'deposit.html';
+                        }, 1000);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('[Payment Pending] Error loading deposit info:', error);
+                alert('Error loading payment information. Please try again.');
+                setTimeout(() => {
+                    window.location.href = 'deposit.html';
+                }, 2000);
+            }
+        }
+
+        // Clean up expired transactions
+        function cleanupExpiredTransactions() {
+            try {
+                const transactions = JSON.parse(localStorage.getItem('latest_transactions') || '[]');
+                const now = Date.now();
+                const validTransactions = transactions.filter(tx => tx.expiry > now);
+                localStorage.setItem('latest_transactions', JSON.stringify(validTransactions));
+            } catch (error) {
+                console.error('[Payment Pending] Error cleaning up transactions:', error);
+            }
+        }
+
+        // Navigation functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("v0trade_user_email");
+            window.location.href = 'login.html';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check authentication
+            const userEmail = checkAuth();
+            if (!userEmail) return;
+            
+            currentUserEmail = userEmail;
+            
+            // Update header with user email
+            updateHeaderEmail(userEmail);
+            
+            // Initialize currency system
+            const currentCurrency = getCurrentCurrency();
+            updateCurrencySymbols(currentCurrency);
+            
+            // Update mobile toggle display
+            const currency = CURRENCIES.find(c => c.code === currentCurrency);
+            if (currency) {
+                document.querySelector('.mobile-currency-symbol').textContent = currency.symbol;
+                document.querySelector('.mobile-currency-code').textContent = currency.code;
+                
+                // Update desktop switcher if exists
+                const desktopSelector = document.querySelector('.currency-selector');
+                if (desktopSelector) {
+                    desktopSelector.querySelector('.current-symbol').textContent = currency.symbol;
+                    desktopSelector.querySelector('.current-code').textContent = currency.code;
+                }
+            }
+            
+            // Load deposit information
+            loadDepositInfo();
+            
+            // Clean up expired transactions
+            cleanupExpiredTransactions();
+            
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', function(event) {
+                const mobileMenu = document.getElementById('mobileMenu');
+                const mobileMenuButton = document.querySelector('button[onclick="toggleMobileMenu()"]');
+                
+                if (mobileMenu && mobileMenu.classList.contains('active') && 
+                    !mobileMenu.contains(event.target) && 
+                    mobileMenuButton && !mobileMenuButton.contains(event.target)) {
+                    closeMobileMenu();
+                }
+            });
+            
+            // Close currency menu with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeMobileCurrencyMenu();
+                }
+            });
+            
+            // Auto-refresh page every 30 seconds to check for status updates
+            setInterval(() => {
+                console.log('[Payment Pending] Auto-refreshing deposit info...');
+                loadDepositInfo();
+            }, 30000);
+            
+            // Listen for currency change events
+            document.addEventListener('currencyChanged', (event) => {
+                console.log('[Payment Pending] Currency changed to:', event.detail.code);
+                loadDepositInfo();
+            });
+        });
+        
+        // Global refresh currency function
+        window.refreshCurrency = function() {
+            const currentCurrency = getCurrentCurrency();
+            updateCurrencySymbols(currentCurrency);
+            loadDepositInfo();
+        };
+    </script>
+</body>
+</html>
